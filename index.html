@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Previsões Solana (SOL)</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.0.0/dist/simple-statistics.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/arima"></script>
+</head>
+<body>
+    <h1>Previsões de Preços da Solana (SOL)</h1>
+    <p>Veja abaixo as previsões utilizando os modelos Holt-Winters e ARIMA para os dados históricos de preços da Solana.</p>
+
+    <div>
+        <h2>Previsão Holt-Winters:</h2>
+        <pre id="resultadoHW"></pre>
+    </div>
+    
+    <div>
+        <h2>Previsão ARIMA:</h2>
+        <pre id="resultadoARIMA"></pre>
+    </div>
+
+    <script>
+        // Função para obter os dados históricos da Solana (SOL) usando a API Coingecko
+        async function obterDadosSolana() {
+            try {
+                const resposta = await axios.get('https://api.coingecko.com/api/v3/coins/solana/market_chart', {
+                    params: {
+                        vs_currency: 'usd',
+                        days: '365',  // Obtendo os últimos 365 dias
+                    }
+                });
+                
+                // Extraindo os preços diários
+                const dados = resposta.data.prices.map(preco => preco[1]);
+                console.log("Dados de preços da Solana:", dados);
+                
+                // Realizando previsões
+                realizarPrevisoes(dados);
+            } catch (erro) {
+                console.error("Erro ao obter dados da Solana:", erro);
+            }
+        }
+
+        // Função Holt-Winters
+        function holtWinters(data, alpha, beta, gamma, period) {
+            let level = data[0];
+            let trend = data[1] - data[0];
+            let seasonal = [];
+            
+            for (let i = 0; i < period; i++) {
+                seasonal.push(data[i] / level);
+            }
+
+            let forecast = [];
+            for (let t = period; t < data.length + period; t++) {
+                level = alpha * (data[t] / seasonal[t % period]) + (1 - alpha) * (level + trend);
+                trend = beta * (level - seasonal[t % period]) + (1 - beta) * trend;
+                seasonal[t % period] = gamma * (data[t] / level) + (1 - gamma) * seasonal[t % period];
+
+                forecast.push(level + trend * (t - (data.length - period)));
+            }
+
+            return forecast;
+        }
+
+        // Função ARIMA
+        function realizarARIMA(dados) {
+            const model = new ARIMA({
+                p: 1,  // Ordem AR
+                d: 1,  // Diferenciação
+                q: 1   // Ordem MA
+            });
+
+            model.train(dados);
+            let previsaoARIMA = model.predict(1);
+            return previsaoARIMA;
+        }
+
+        // Função para realizar as previsões Holt-Winters e ARIMA
+        function realizarPrevisoes(dados) {
+            // Holt-Winters
+            let alpha = 0.5;
+            let beta = 0.1;
+            let gamma = 0.1;
+            let period = 7;  // Sazonalidade semanal (7 dias)
+
+            let resultadoHW = holtWinters(dados, alpha, beta, gamma, period);
+            document.getElementById('resultadoHW').textContent = JSON.stringify(resultadoHW, null, 2);
+
+            // ARIMA
+            let resultadoARIMA = realizarARIMA(dados);
+            document.getElementById('resultadoARIMA').textContent = JSON.stringify(resultadoARIMA, null, 2);
+        }
+
+        // Chamar a função para obter os dados e gerar as previsões
+        obterDadosSolana();
+    </script>
+</body>
+</html>
+
