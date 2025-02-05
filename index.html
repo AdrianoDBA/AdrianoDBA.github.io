@@ -44,7 +44,7 @@
                 const resposta = await axios.get('https://api.coingecko.com/api/v3/coins/solana/market_chart', {
                     params: {
                         vs_currency: 'usd',
-                        days: '365',  // Obtendo os últimos 365 dias
+                        days: '60',  // Obtendo os últimos 365 dias
                     }
                 });
 
