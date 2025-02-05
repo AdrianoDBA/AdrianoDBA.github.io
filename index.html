@@ -52,7 +52,7 @@
                 const dados = resposta.data.prices.map(preco => preco[1]);
 
                 // Exibir o preço atual
-                document.getElementById('preco-atual').textContent = resposta.data.prices[resposta.data.prices.length - 1][1];
+                document.getElementById('preco-atual').textContent = dados[dados.length - 1];
 
                 // Calcular a volatilidade
                 const volatilidade = calcularVolatilidade(dados);
