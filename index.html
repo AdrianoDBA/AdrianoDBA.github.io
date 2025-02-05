@@ -13,13 +13,28 @@
     <p>Veja abaixo as previsões utilizando os modelos Holt-Winters e ARIMA para os dados históricos de preços da Solana.</p>
 
     <div>
-        <h2>Previsão Holt-Winters:</h2>
-        <pre id="resultadoHW"></pre>
+        <h2>Preço Atual:</h2>
+        <p id="preco-atual">Carregando...</p>
+    </div>
+
+    <div>
+        <h2>Volatilidade:</h2>
+        <p id="volatilidade">Carregando...</p>
+    </div>
+
+    <div>
+        <h2>Tendência:</h2>
+        <p id="tendencia">Carregando...</p>
+    </div>
+
+    <div>
+        <h3>Previsões SARIMA (7 dias):</h3>
+        <pre id="resultadoARIMA"></pre>
     </div>
     
     <div>
-        <h2>Previsão ARIMA:</h2>
-        <pre id="resultadoARIMA"></pre>
+        <h3>Previsões Holt-Winters (7 dias):</h3>
+        <pre id="resultadoHW"></pre>
     </div>
 
     <script>
@@ -32,15 +47,50 @@
                         days: '365',  // Obtendo os últimos 365 dias
                     }
                 });
-                
+
                 // Extraindo os preços diários
                 const dados = resposta.data.prices.map(preco => preco[1]);
-                console.log("Dados de preços da Solana:", dados);
-                
+
+                // Exibir o preço atual
+                document.getElementById('preco-atual').textContent = resposta.data.prices[resposta.data.prices.length - 1][1];
+
+                // Calcular a volatilidade
+                const volatilidade = calcularVolatilidade(dados);
+                document.getElementById('volatilidade').textContent = volatilidade.toFixed(2);
+
+                // Determinar a tendência
+                const tendencia = calcularTendencia(dados);
+                document.getElementById('tendencia').textContent = tendencia;
+
                 // Realizando previsões
                 realizarPrevisoes(dados);
             } catch (erro) {
                 console.error("Erro ao obter dados da Solana:", erro);
+            }
+        }
+
+        // Função para calcular a volatilidade
+        function calcularVolatilidade(dados) {
+            const desvios = simpleStatistics.standardDeviation(dados);
+            return desvios;
+        }
+
+        // Função para determinar a tendência
+        function calcularTendencia(dados) {
+            const diferencas = [];
+            for (let i = 1; i < dados.length; i++) {
+                diferencas.push(dados[i] - dados[i - 1]);
+            }
+
+            const somaDiferencas = diferencas.reduce((a, b) => a + b, 0);
+            const mediaDiferencas = somaDiferencas / diferencas.length;
+
+            if (mediaDiferencas > 0) {
+                return "Positiva";
+            } else if (mediaDiferencas < 0) {
+                return "Negativa";
+            } else {
+                return "Neutra";
             }
         }
 
@@ -49,8 +99,7 @@
             let level = data[0];
             let trend = data[1] - data[0];
             let seasonal = [];
-            
-            // Inicializando o componente sazonal
+
             for (let i = 0; i < period; i++) {
                 seasonal.push(data[i] / level);
             }
@@ -76,7 +125,7 @@
             });
 
             model.train(dados);
-            let previsaoARIMA = model.predict(7);  // Previsão para os próximos 7 dias
+            let previsaoARIMA = model.predict(7); // Previsões para os próximos 7 dias
             return previsaoARIMA;
         }
 
@@ -89,11 +138,11 @@
             let period = 7;  // Sazonalidade semanal (7 dias)
 
             let resultadoHW = holtWinters(dados, alpha, beta, gamma, period);
-            document.getElementById('resultadoHW').textContent = JSON.stringify(resultadoHW, null, 2);
+            document.getElementById('resultadoHW').textContent = resultadoHW.map((valor, i) => `Dia ${i+1}: ${valor.toFixed(2)}`).join("\n");
 
             // ARIMA
             let resultadoARIMA = realizarARIMA(dados);
-            document.getElementById('resultadoARIMA').textContent = JSON.stringify(resultadoARIMA, null, 2);
+            document.getElementById('resultadoARIMA').textContent = resultadoARIMA.map((valor, i) => `Dia ${i+1}: ${valor.toFixed(2)}`).join("\n");
         }
 
         // Chamar a função para obter os dados e gerar as previsões
