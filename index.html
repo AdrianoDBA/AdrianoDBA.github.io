@@ -6,147 +6,146 @@
     <title>Previsões Solana (SOL)</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.0.0/dist/simple-statistics.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/arima"></script>
 </head>
-<body>
-    <h1>Previsões de Preços da Solana (SOL)</h1>
-    <p>Veja abaixo as previsões utilizando os modelos Holt-Winters e ARIMA para os dados históricos de preços da Solana.</p>
+<body style="font-family: Arial, sans-serif; background-color: #121212; color: white; text-align: center; padding: 20px;">
 
-    <div>
-        <h2>Preço Atual:</h2>
-        <p id="preco-atual">Carregando...</p>
-    </div>
+    <h1>📊 Solana (SOL) - Análise & Previsões</h1>
+    <p>Dados coletados em tempo real da CoinGecko.</p>
 
-    <div>
-        <h2>Volatilidade:</h2>
-        <p id="volatilidade">Carregando...</p>
-    </div>
+    <h2>💰 Preço Atual:</h2>
+    <p id="preco-atual">Carregando...</p>
 
-    <div>
-        <h2>Tendência:</h2>
-        <p id="tendencia">Carregando...</p>
-    </div>
+    <h2>📉 Volatilidade:</h2>
+    <p id="volatilidade">Carregando...</p>
 
-    <div>
-        <h3>Previsões SARIMA (7 dias):</h3>
-        <pre id="resultadoARIMA"></pre>
-    </div>
-    
-    <div>
-        <h3>Previsões Holt-Winters (7 dias):</h3>
-        <pre id="resultadoHW"></pre>
-    </div>
+    <h2>📊 Tendência:</h2>
+    <p id="tendencia">Carregando...</p>
+
+    <h3>🔮 Previsões SARIMA (4 dias):</h3>
+    <pre id="resultadoSARIMA"></pre>
+
+    <h3>🔮 Previsões Holt-Winters (4 dias):</h3>
+    <pre id="resultadoHW"></pre>
 
     <script>
-        // Função para obter os dados históricos da Solana (SOL) usando a API Coingecko
-        async function obterDadosSolana() {
-            try {
-                const resposta = await axios.get('https://api.coingecko.com/api/v3/coins/solana/market_chart', {
-                    params: {
-                        vs_currency: 'usd',
-                        days: '60',  // Obtendo os últimos 365 dias
-                    }
-                });
-
-                // Extraindo os preços diários
-                const dados = resposta.data.prices.map(preco => preco[1]);
-
-                // Exibir o preço atual
-                document.getElementById('preco-atual').textContent = dados[dados.length - 1];
-
-                // Calcular a volatilidade
-                const volatilidade = calcularVolatilidade(dados);
-                document.getElementById('volatilidade').textContent = volatilidade.toFixed(2);
-
-                // Determinar a tendência
-                const tendencia = calcularTendencia(dados);
-                document.getElementById('tendencia').textContent = tendencia;
-
-                // Realizando previsões
-                realizarPrevisoes(dados);
-            } catch (erro) {
-                console.error("Erro ao obter dados da Solana:", erro);
-            }
+        // 📡 Buscar dados da Solana da CoinGecko
+        async function buscarDadosSolana() {
+            const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=30';
+            const resposta = await axios.get(url);
+            return resposta.data.prices.map(p => p[1]);
         }
 
-        // Função para calcular a volatilidade
-        function calcularVolatilidade(dados) {
-            const desvios = simpleStatistics.standardDeviation(dados);
-            return desvios;
+        // 📉 Calcular Volatilidade (Desvio Padrão dos Retornos)
+        function calcularVolatilidade(precos) {
+            const retornos = precos.slice(1).map((p, i) => (p - precos[i]) / precos[i]);
+            return simpleStatistics.standardDeviation(retornos);
         }
 
-        // Função para determinar a tendência
-        function calcularTendencia(dados) {
-            const diferencas = [];
-            for (let i = 1; i < dados.length; i++) {
-                diferencas.push(dados[i] - dados[i - 1]);
-            }
-
-            const somaDiferencas = diferencas.reduce((a, b) => a + b, 0);
-            const mediaDiferencas = somaDiferencas / diferencas.length;
-
-            if (mediaDiferencas > 0) {
-                return "Positiva";
-            } else if (mediaDiferencas < 0) {
-                return "Negativa";
-            } else {
-                return "Neutra";
-            }
+        // 📈 Calcular Tendência por Regressão Linear
+        function calcularTendencia(precos) {
+            const n = precos.length;
+            const X = [...Array(n).keys()];
+            const somaX = X.reduce((a, b) => a + b, 0);
+            const somaY = precos.reduce((a, b) => a + b, 0);
+            const somaXY = X.reduce((a, b, i) => a + b * precos[i], 0);
+            const somaX2 = X.reduce((a, b) => a + b * b, 0);
+            return (n * somaXY - somaX * somaY) / (n * somaX2 - somaX * somaX);
         }
 
-        // Função Holt-Winters
-        function holtWinters(data, alpha, beta, gamma, period) {
-            let level = data[0];
-            let trend = data[1] - data[0];
-            let seasonal = [];
-
-            for (let i = 0; i < period; i++) {
-                seasonal.push(data[i] / level);
+        // 🔁 Diferenciar Série d vezes
+        function diferenciarSerie(serie, d) {
+            let diferenciado = serie;
+            for (let i = 0; i < d; i++) {
+                diferenciado = diferenciado.slice(1).map((v, j) => v - diferenciado[j]);
             }
+            return diferenciado;
+        }
 
-            let forecast = [];
-            for (let t = period; t < data.length + period; t++) {
-                level = alpha * (data[t] / seasonal[t % period]) + (1 - alpha) * (level + trend);
-                trend = beta * (level - seasonal[t % period]) + (1 - beta) * trend;
-                seasonal[t % period] = gamma * (data[t] / level) + (1 - gamma) * seasonal[t % period];
+        // 📊 Ajuste SARIMA (p, d, q) x (P, D, Q)
+        function ajustarSARIMA(serie, p = 2, d = 1, q = 2, P = 1, D = 1, Q = 1) {
+            let serieDiferenciada = diferenciarSerie(serie, d);
+            let media = simpleStatistics.mean(serieDiferenciada);
+            let ar = serie.slice(-p).reverse().map((v, i) => v * (0.4 / (i + 1)));
+            let ma = serieDiferenciada.slice(-q).reverse().map((v, i) => v * (0.4 / (i + 1)));
+            let seasonalAR = serie.slice(-P).reverse().map((v, i) => v * (0.2 / (i + 1)));
+            let seasonalMA = serieDiferenciada.slice(-Q).reverse().map((v, i) => v * (0.2 / (i + 1)));
 
-                forecast.push(level + trend * (t - (data.length - period)));
+            return { media, ar, ma, seasonalAR, seasonalMA };
+        }
+
+        // 🔮 Previsão SARIMA corrigida
+        function preverSARIMA(serie, params, passos = 4) {
+            let { media, ar, ma, seasonalAR, seasonalMA } = params;
+            let previsoes = [];
+            let ultimoValor = serie[serie.length - 1];
+
+            for (let i = 0; i < passos; i++) {
+                let arTermo = ar.reduce((sum, v) => sum + v, 0);
+                let maTermo = ma.reduce((sum, v) => sum + v, 0);
+                let seasonalARTermo = seasonalAR.reduce((sum, v) => sum + v, 0);
+                let seasonalMATermo = seasonalMA.reduce((sum, v) => sum + v, 0);
+
+                let novoValor = ultimoValor + media + arTermo + maTermo + seasonalARTermo + seasonalMATermo;
+                previsoes.push(novoValor);
+
+                ar.unshift(novoValor * 0.3);
+                ar.pop();
+                ma.unshift((novoValor - ultimoValor) * 0.3);
+                ma.pop();
+                seasonalAR.unshift(novoValor * 0.2);
+                seasonalAR.pop();
+                seasonalMA.unshift((novoValor - ultimoValor) * 0.2);
+                seasonalMA.pop();
+
+                ultimoValor = novoValor;
             }
 
-            return forecast;
+            return previsoes;
         }
 
-        // Função ARIMA
-        function realizarARIMA(dados) {
-            const model = new ARIMA({
-                p: 1,  // Ordem AR
-                d: 1,  // Diferenciação
-                q: 1   // Ordem MA
-            });
+        // 🔮 Holt-Winters Exponential Smoothing
+        function preverHoltWinters(serie, alpha = 0.6, beta = 0.3, gamma = 0.2, passos = 4) {
+            let L = serie[0];
+            let B = serie[1] - serie[0];
+            let S = Array(serie.length).fill(1);
 
-            model.train(dados);
-            let previsaoARIMA = model.predict(7); // Previsões para os próximos 7 dias
-            return previsaoARIMA;
+            for (let i = 1; i < serie.length; i++) {
+                let L_prev = L;
+                L = alpha * (serie[i] / S[i % S.length]) + (1 - alpha) * (L + B);
+                B = beta * (L - L_prev) + (1 - beta) * B;
+                S[i % S.length] = gamma * (serie[i] / L) + (1 - gamma) * S[i % S.length];
+            }
+
+            let previsoes = [];
+            for (let i = 1; i <= passos; i++) {
+                previsoes.push((L + i * B) * S[i % S.length]);
+            }
+
+            return previsoes;
         }
 
-        // Função para realizar as previsões Holt-Winters e ARIMA
-        function realizarPrevisoes(dados) {
-            // Holt-Winters
-            let alpha = 0.5;
-            let beta = 0.1;
-            let gamma = 0.1;
-            let period = 7;  // Sazonalidade semanal (7 dias)
+        // 🚀 Função Principal
+        async function executar() {
+            const precos = await buscarDadosSolana();
+            const precoAtual = precos[precos.length - 1];
 
-            let resultadoHW = holtWinters(dados, alpha, beta, gamma, period);
-            document.getElementById('resultadoHW').textContent = resultadoHW.map((valor, i) => `Dia ${i+1}: ${valor.toFixed(2)}`).join("\n");
+            // 📊 Análises
+            document.getElementById('preco-atual').textContent = `$${precoAtual.toFixed(2)}`;
+            document.getElementById('volatilidade').textContent = `${(calcularVolatilidade(precos) * 100).toFixed(2)}%`;
 
-            // ARIMA
-            let resultadoARIMA = realizarARIMA(dados);
-            document.getElementById('resultadoARIMA').textContent = resultadoARIMA.map((valor, i) => `Dia ${i+1}: ${valor.toFixed(2)}`).join("\n");
+            const tendencia = calcularTendencia(precos);
+            document.getElementById('tendencia').textContent = tendencia > 0 ? "📈 Alta" : tendencia < 0 ? "📉 Baixa" : "➡️ Estável";
+
+            // 🔮 Previsões SARIMA e Holt-Winters
+            const parametrosSARIMA = ajustarSARIMA(precos);
+            const previsoesSARIMA = preverSARIMA(precos, parametrosSARIMA, 4);
+            document.getElementById('resultadoSARIMA').textContent = previsoesSARIMA.map((p, i) => `Dia ${i+1}: $${p.toFixed(2)}`).join("\n");
+
+            const previsoesHW = preverHoltWinters(precos, 0.6, 0.3, 0.2, 4);
+            document.getElementById('resultadoHW').textContent = previsoesHW.map((p, i) => `Dia ${i+1}: $${p.toFixed(2)}`).join("\n");
         }
 
-        // Chamar a função para obter os dados e gerar as previsões
-        obterDadosSolana();
+        executar();
     </script>
 </body>
 </html>
