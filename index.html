@@ -50,6 +50,7 @@
             let trend = data[1] - data[0];
             let seasonal = [];
             
+            // Inicializando o componente sazonal
             for (let i = 0; i < period; i++) {
                 seasonal.push(data[i] / level);
             }
@@ -75,7 +76,7 @@
             });
 
             model.train(dados);
-            let previsaoARIMA = model.predict(1);
+            let previsaoARIMA = model.predict(7);  // Previsão para os próximos 7 dias
             return previsaoARIMA;
         }
 
@@ -100,4 +101,3 @@
     </script>
 </body>
 </html>
-
