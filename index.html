@@ -1,209 +1,123 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Previsões de Solana (SOL)</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: white;
-      margin: 0;
-      padding: 0;
-    }
-    h1, h2 {
-      text-align: center;
-      color: orange;
-    }
-    .container {
-      width: 80%;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .previsao {
-      margin-bottom: 20px;
-    }
-    .previsao h3 {
-      color: cyan;
-    }
-    .previsao ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    .previsao li {
-      margin: 5px 0;
-    }
-    .btn {
-      display: block;
-      background-color: #f8f8f8;
-      color: #121212;
-      padding: 10px;
-      text-align: center;
-      margin: 20px auto;
-      width: 200px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
+<script>
+  // Função para buscar os dados da Solana na CoinGecko
+  async function buscarDadosSolana() {
+    const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=30';
+    const req = await fetch(url);
+    const data = await req.json();
+    return data;
+  }
 
-  <div class="container">
-    <h1>📊 Solana (SOL) - Análise & Previsões</h1>
-    <h2>Dados coletados em tempo real da CoinGecko.</h2>
+  // Função para calcular a volatilidade (desvio padrão)
+  function calcularVolatilidade(precos) {
+    const retornos = precos.slice(1).map((p, i) => (p - precos[i]) / precos[i]);
+    const media = retornos.reduce((a, b) => a + b, 0) / retornos.length;
+    return Math.sqrt(retornos.reduce((a, b) => a + Math.pow(b - media, 2), 0) / retornos.length);
+  }
 
-    <div class="previsao">
-      <h3>💰 Preço Atual:</h3>
-      <p id="preco">Carregando...</p>
-    </div>
+  // Função para calcular a tendência (regressão linear)
+  function calcularTendencia(precos) {
+    const n = precos.length;
+    const X = [...Array(n).keys()];
+    const somaX = X.reduce((a, b) => a + b, 0);
+    const somaY = precos.reduce((a, b) => a + b, 0);
+    const somaXY = X.reduce((a, b, i) => a + b * precos[i], 0);
+    const somaX2 = X.reduce((a, b) => a + b * b, 0);
 
-    <div class="previsao">
-      <h3>📉 Volatilidade:</h3>
-      <p id="volatilidade">Carregando...</p>
-    </div>
+    return (n * somaXY - somaX * somaY) / (n * somaX2 - somaX * somaX);
+  }
 
-    <div class="previsao">
-      <h3>📊 Tendência:</h3>
-      <p id="tendencia">Carregando...</p>
-    </div>
+  // Função para calcular as previsões SARIMA
+  function preverSARIMA(serie, passos = 4) {
+    let previsoes = [];
+    let ultimoValor = serie[serie.length - 1];
 
-    <div class="previsao">
-      <h3>🔮 Previsões SARIMA (4 dias):</h3>
-      <ul id="sarima">
-        <li>Carregando...</li>
-      </ul>
-    </div>
-
-    <div class="previsao">
-      <h3>🔮 Previsões Holt-Winters (4 dias):</h3>
-      <ul id="holtwinters">
-        <li>Carregando...</li>
-      </ul>
-    </div>
-
-    <div class="btn" onclick="atualizarDados()">Atualizar Dados</div>
-  </div>
-
-  <script>
-    // Função para buscar os dados da Solana na CoinGecko
-    async function buscarDadosSolana() {
-      const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=30';
-      const req = await fetch(url);
-      const data = await req.json();
-      return data;
+    for (let i = 0; i < passos; i++) {
+      let novoValor = ultimoValor + Math.random() * 10 - 5; // Simulação simples para previsão
+      previsoes.push(novoValor);
+      ultimoValor = novoValor;
     }
 
-    // Função para calcular a volatilidade (desvio padrão)
-    function calcularVolatilidade(precos) {
-      const retornos = precos.slice(1).map((p, i) => (p - precos[i]) / precos[i]);
-      const media = retornos.reduce((a, b) => a + b, 0) / retornos.length;
-      return Math.sqrt(retornos.reduce((a, b) => a + Math.pow(b - media, 2), 0) / retornos.length);
+    return previsoes;
+  }
+
+  // Função para calcular as previsões Holt-Winters
+  function preverHoltWinters(serie, passos = 4) {
+    let previsoes = [];
+    let ultimoValor = serie[serie.length - 1];
+
+    for (let i = 0; i < passos; i++) {
+      let novoValor = ultimoValor + Math.random() * 10 - 5; // Simulação simples para previsão
+      previsoes.push(novoValor);
+      ultimoValor = novoValor;
     }
 
-    // Função para calcular a tendência (regressão linear)
-    function calcularTendencia(precos) {
-      const n = precos.length;
-      const X = [...Array(n).keys()];
-      const somaX = X.reduce((a, b) => a + b, 0);
-      const somaY = precos.reduce((a, b) => a + b, 0);
-      const somaXY = X.reduce((a, b, i) => a + b * precos[i], 0);
-      const somaX2 = X.reduce((a, b) => a + b * b, 0);
+    return previsoes;
+  }
 
-      return (n * somaXY - somaX * somaY) / (n * somaX2 - somaX * somaX);
+  // Função para armazenar dados no localStorage
+  function armazenarDadosNoLocalStorage(precos) {
+    const data = {
+      prices: precos,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('solanaData', JSON.stringify(data));
+  }
+
+  // Função para carregar dados do localStorage
+  function carregarDadosDoLocalStorage() {
+    const data = localStorage.getItem('solanaData');
+    return data ? JSON.parse(data) : null;
+  }
+
+  // Função para exibir os dados no HTML
+  async function exibirDados() {
+    // Tentar carregar dados do localStorage
+    const dadosPersistidos = carregarDadosDoLocalStorage();
+    let precos;
+    if (dadosPersistidos && dadosPersistidos.prices) {
+      precos = dadosPersistidos.prices;
+    } else {
+      const data = await buscarDadosSolana();
+      precos = data.prices.map(p => p[1]);
+      armazenarDadosNoLocalStorage(precos); // Salvar dados no localStorage
     }
 
-    // Função para calcular as previsões SARIMA
-    function preverSARIMA(serie, passos = 4) {
-      let previsoes = [];
-      let ultimoValor = serie[serie.length - 1];
+    const precoAtual = precos[precos.length - 1];
+    const volatilidade = calcularVolatilidade(precos);
+    const tendencia = calcularTendencia(precos);
+    const direcaoTendencia = tendencia > 0 ? "📈 Alta" : tendencia < 0 ? "📉 Baixa" : "➡️ Estável";
+    const previsoesSARIMA = preverSARIMA(precos);
+    const previsoesHW = preverHoltWinters(precos);
 
-      for (let i = 0; i < passos; i++) {
-        let novoValor = ultimoValor + Math.random() * 10 - 5; // Simulação simples para previsão
-        previsoes.push(novoValor);
-        ultimoValor = novoValor;
-      }
+    document.getElementById('preco').textContent = `$${precoAtual.toFixed(2)}`;
+    document.getElementById('volatilidade').textContent = `${(volatilidade * 100).toFixed(2)}%`;
+    document.getElementById('tendencia').textContent = direcaoTendencia;
 
-      return previsoes;
-    }
+    const sarimaLista = document.getElementById('sarima');
+    sarimaLista.innerHTML = '';
+    previsoesSARIMA.forEach(p => {
+      const item = document.createElement('li');
+      item.textContent = `$${p.toFixed(2)}`;
+      sarimaLista.appendChild(item);
+    });
 
-    // Função para calcular as previsões Holt-Winters
-    function preverHoltWinters(serie, passos = 4) {
-      let previsoes = [];
-      let ultimoValor = serie[serie.length - 1];
+    const holtwintersLista = document.getElementById('holtwinters');
+    holtwintersLista.innerHTML = '';
+    previsoesHW.forEach(p => {
+      const item = document.createElement('li');
+      item.textContent = `$${p.toFixed(2)}`;
+      holtwintersLista.appendChild(item);
+    });
+  }
 
-      for (let i = 0; i < passos; i++) {
-        let novoValor = ultimoValor + Math.random() * 10 - 5; // Simulação simples para previsão
-        previsoes.push(novoValor);
-        ultimoValor = novoValor;
-      }
-
-      return previsoes;
-    }
-
-    // Função para armazenar dados no localStorage
-    function armazenarDadosNoLocalStorage(precos) {
-      const data = {
-        prices: precos,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem('solanaData', JSON.stringify(data));
-    }
-
-    // Função para carregar dados do localStorage
-    function carregarDadosDoLocalStorage() {
-      const data = localStorage.getItem('solanaData');
-      return data ? JSON.parse(data) : null;
-    }
-
-    // Função para exibir os dados no HTML
-    async function exibirDados() {
-      // Tentar carregar dados do localStorage
-      const dadosPersistidos = carregarDadosDoLocalStorage();
-      let precos;
-      if (dadosPersistidos && dadosPersistidos.prices) {
-        precos = dadosPersistidos.prices;
-      } else {
-        const data = await buscarDadosSolana();
-        precos = data.prices.map(p => p[1]);
-        armazenarDadosNoLocalStorage(precos); // Salvar dados no localStorage
-      }
-
-      const precoAtual = precos[precos.length - 1];
-      const volatilidade = calcularVolatilidade(precos);
-      const tendencia = calcularTendencia(precos);
-      const direcaoTendencia = tendencia > 0 ? "📈 Alta" : tendencia < 0 ? "📉 Baixa" : "➡️ Estável";
-      const previsoesSARIMA = preverSARIMA(precos);
-      const previsoesHW = preverHoltWinters(precos);
-
-      document.getElementById('preco').textContent = `$${precoAtual.toFixed(2)}`;
-      document.getElementById('volatilidade').textContent = `${(volatilidade * 100).toFixed(2)}%`;
-      document.getElementById('tendencia').textContent = direcaoTendencia;
-
-      const sarimaLista = document.getElementById('sarima');
-      sarimaLista.innerHTML = '';
-      previsoesSARIMA.forEach(p => {
-        const item = document.createElement('li');
-        item.textContent = `$${p.toFixed(2)}`;
-        sarimaLista.appendChild(item);
-      });
-
-      const holtwintersLista = document.getElementById('holtwinters');
-      holtwintersLista.innerHTML = '';
-      previsoesHW.forEach(p => {
-        const item = document.createElement('li');
-        item.textContent = `$${p.toFixed(2)}`;
-        holtwintersLista.appendChild(item);
-      });
-    }
-
-    // Função para atualizar os dados manualmente
-    function atualizarDados() {
-      exibirDados();
-    }
-
-    // Inicializar com dados ao carregar a página
+  // Função para atualizar os dados manualmente
+  function atualizarDados() {
     exibirDados();
-  </script>
+  }
 
-</body>
-</html>
+  // Executa a função 'atualizarDados' a cada 30 segundos (30.000 milissegundos)
+  setInterval(atualizarDados, 5000); // 30 segundos
+
+  // Inicializar com dados ao carregar a página
+  exibirDados();
+</script>
