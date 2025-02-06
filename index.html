@@ -140,16 +140,38 @@
       return previsoes;
     }
 
+    // Função para armazenar dados no localStorage
+    function armazenarDadosNoLocalStorage(precos) {
+      const data = {
+        prices: precos,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('solanaData', JSON.stringify(data));
+    }
+
+    // Função para carregar dados do localStorage
+    function carregarDadosDoLocalStorage() {
+      const data = localStorage.getItem('solanaData');
+      return data ? JSON.parse(data) : null;
+    }
+
     // Função para exibir os dados no HTML
     async function exibirDados() {
-      const data = await buscarDadosSolana();
-      const precos = data.prices.map(p => p[1]);
-      const precoAtual = precos[precos.length - 1];
+      // Tentar carregar dados do localStorage
+      const dadosPersistidos = carregarDadosDoLocalStorage();
+      let precos;
+      if (dadosPersistidos && dadosPersistidos.prices) {
+        precos = dadosPersistidos.prices;
+      } else {
+        const data = await buscarDadosSolana();
+        precos = data.prices.map(p => p[1]);
+        armazenarDadosNoLocalStorage(precos); // Salvar dados no localStorage
+      }
 
+      const precoAtual = precos[precos.length - 1];
       const volatilidade = calcularVolatilidade(precos);
       const tendencia = calcularTendencia(precos);
       const direcaoTendencia = tendencia > 0 ? "📈 Alta" : tendencia < 0 ? "📉 Baixa" : "➡️ Estável";
-
       const previsoesSARIMA = preverSARIMA(precos);
       const previsoesHW = preverHoltWinters(precos);
 
