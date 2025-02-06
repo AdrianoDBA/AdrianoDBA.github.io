@@ -6,9 +6,27 @@
     <title>Previsões Solana (SOL)</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.0.0/dist/simple-statistics.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #f0a500;
+        }
+        pre {
+            background-color: #1e1e1e;
+            padding: 10px;
+            border-radius: 5px;
+            display: inline-block;
+            text-align: left;
+        }
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #121212; color: white; text-align: center; padding: 20px;">
-
+<body>
     <h1>📊 Solana (SOL) - Análise & Previsões</h1>
     <p>Dados coletados em tempo real da CoinGecko.</p>
 
@@ -22,34 +40,45 @@
     <p id="tendencia">Carregando...</p>
 
     <h3>🔮 Previsões SARIMA (4 dias):</h3>
-    <pre id="resultadoSARIMA"></pre>
+    <pre id="resultadoSARIMA">Carregando...</pre>
 
     <h3>🔮 Previsões Holt-Winters (4 dias):</h3>
-    <pre id="resultadoHW"></pre>
+    <pre id="resultadoHW">Carregando...</pre>
 
     <script>
         // 📡 Buscar dados da Solana da CoinGecko
         async function buscarDadosSolana() {
-            const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=30';
-            const resposta = await axios.get(url);
-            return resposta.data.prices.map(p => p[1]);
+            try {
+                const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=30';
+                const resposta = await axios.get(url);
+                console.log("Dados da API:", resposta.data.prices); // Depuração
+                return resposta.data.prices.map(p => p[1]); // Extrai apenas os preços
+            } catch (erro) {
+                console.error("Erro ao buscar dados da API:", erro);
+                return [];
+            }
         }
 
         // 📉 Calcular Volatilidade (Desvio Padrão dos Retornos)
         function calcularVolatilidade(precos) {
+            if (precos.length < 2) return 0; // Evita erros com arrays pequenos
             const retornos = precos.slice(1).map((p, i) => (p - precos[i]) / precos[i]);
+            console.log("Retornos:", retornos); // Depuração
             return simpleStatistics.standardDeviation(retornos);
         }
 
         // 📈 Calcular Tendência por Regressão Linear
         function calcularTendencia(precos) {
+            if (precos.length === 0) return 0; // Evita erros com arrays vazios
             const n = precos.length;
             const X = [...Array(n).keys()];
             const somaX = X.reduce((a, b) => a + b, 0);
             const somaY = precos.reduce((a, b) => a + b, 0);
             const somaXY = X.reduce((a, b, i) => a + b * precos[i], 0);
             const somaX2 = X.reduce((a, b) => a + b * b, 0);
-            return (n * somaXY - somaX * somaY) / (n * somaX2 - somaX * somaX);
+            const tendencia = (n * somaXY - somaX * somaY) / (n * somaX2 - somaX * somaX);
+            console.log("Tendência:", tendencia); // Depuração
+            return tendencia;
         }
 
         // 🔁 Diferenciar Série d vezes
@@ -69,7 +98,7 @@
             let ma = serieDiferenciada.slice(-q).reverse().map((v, i) => v * (0.4 / (i + 1)));
             let seasonalAR = serie.slice(-P).reverse().map((v, i) => v * (0.2 / (i + 1)));
             let seasonalMA = serieDiferenciada.slice(-Q).reverse().map((v, i) => v * (0.2 / (i + 1)));
-
+            console.log("Parâmetros SARIMA:", { media, ar, ma, seasonalAR, seasonalMA }); // Depuração
             return { media, ar, ma, seasonalAR, seasonalMA };
         }
 
@@ -100,6 +129,7 @@
                 ultimoValor = novoValor;
             }
 
+            console.log("Previsões SARIMA:", previsoes); // Depuração
             return previsoes;
         }
 
@@ -121,28 +151,37 @@
                 previsoes.push((L + i * B) * S[i % S.length]);
             }
 
+            console.log("Previsões Holt-Winters:", previsoes); // Depuração
             return previsoes;
         }
 
         // 🚀 Função Principal
         async function executar() {
-            const precos = await buscarDadosSolana();
-            const precoAtual = precos[precos.length - 1];
+            try {
+                const precos = await buscarDadosSolana();
+                if (precos.length === 0) {
+                    console.error("Nenhum dado encontrado.");
+                    return;
+                }
 
-            // 📊 Análises
-            document.getElementById('preco-atual').textContent = `$${precoAtual.toFixed(2)}`;
-            document.getElementById('volatilidade').textContent = `${(calcularVolatilidade(precos) * 100).toFixed(2)}%`;
+                const precoAtual = precos[precos.length - 1];
+                document.getElementById('preco-atual').textContent = `$${precoAtual.toFixed(2)}`;
 
-            const tendencia = calcularTendencia(precos);
-            document.getElementById('tendencia').textContent = tendencia > 0 ? "📈 Alta" : tendencia < 0 ? "📉 Baixa" : "➡️ Estável";
+                const volatilidade = calcularVolatilidade(precos);
+                document.getElementById('volatilidade').textContent = `${(volatilidade * 100).toFixed(2)}%`;
 
-            // 🔮 Previsões SARIMA e Holt-Winters
-            const parametrosSARIMA = ajustarSARIMA(precos);
-            const previsoesSARIMA = preverSARIMA(precos, parametrosSARIMA, 4);
-            document.getElementById('resultadoSARIMA').textContent = previsoesSARIMA.map((p, i) => `Dia ${i+1}: $${p.toFixed(2)}`).join("\n");
+                const tendencia = calcularTendencia(precos);
+                document.getElementById('tendencia').textContent = tendencia > 0 ? "📈 Alta" : tendencia < 0 ? "📉 Baixa" : "➡️ Estável";
 
-            const previsoesHW = preverHoltWinters(precos, 0.6, 0.3, 0.2, 4);
-            document.getElementById('resultadoHW').textContent = previsoesHW.map((p, i) => `Dia ${i+1}: $${p.toFixed(2)}`).join("\n");
+                const parametrosSARIMA = ajustarSARIMA(precos);
+                const previsoesSARIMA = preverSARIMA(precos, parametrosSARIMA, 4);
+                document.getElementById('resultadoSARIMA').textContent = previsoesSARIMA.map((p, i) => `Dia ${i + 1}: $${p.toFixed(2)}`).join("\n");
+
+                const previsoesHW = preverHoltWinters(precos, 0.6, 0.3, 0.2, 4);
+                document.getElementById('resultadoHW').textContent = previsoesHW.map((p, i) => `Dia ${i + 1}: $${p.toFixed(2)}`).join("\n");
+            } catch (erro) {
+                console.error("Erro na execução:", erro);
+            }
         }
 
         executar();
