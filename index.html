@@ -1,41 +1,81 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solana (SOL) - Análise & Previsões</title>
-    <script>
-        async function carregarDados() {
-            try {
-                const response = await fetch('data.json');
-                const data = await response.json();
-
-                document.getElementById("preco").innerText = `$${data.precoAtual.toFixed(2)}`;
-                document.getElementById("volatilidade").innerText = `${(data.volatilidade * 100).toFixed(2)}%`;
-                document.getElementById("tendencia").innerText = data.tendencia > 0 ? "📈 Alta" : "📉 Baixa";
-                document.getElementById("sarima").innerText = data.previsoesSARIMA.join(", ");
-                document.getElementById("holtwinters").innerText = data.previsoesHoltWinters.join(", ");
-            } catch (error) {
-                console.error("Erro ao carregar dados:", error);
-            }
-        }
-        window.onload = carregarDados;
-    </script>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #121212; color: white; text-align: center; }
-        .container { max-width: 600px; margin: auto; padding: 20px; }
-        .card { background: #1E1E1E; padding: 20px; margin: 10px; border-radius: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solana - Análise e Previsões</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: white;
+      text-align: center;
+      margin-top: 20px;
+    }
+    .resultados {
+      margin-top: 20px;
+    }
+    .previsoes {
+      margin-top: 10px;
+      padding: 5px;
+      background-color: #2c2c2c;
+      border-radius: 5px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📊 Solana (SOL) - Análise & Previsões</h1>
-        <p>Dados coletados da CoinGecko</p>
-        <div class="card"><h2>💰 Preço Atual</h2><p id="preco">Carregando...</p></div>
-        <div class="card"><h2>📉 Volatilidade</h2><p id="volatilidade">Carregando...</p></div>
-        <div class="card"><h2>📊 Tendência</h2><p id="tendencia">Carregando...</p></div>
-        <div class="card"><h2>🔮 Previsões SARIMA (4 dias)</h2><p id="sarima">Carregando...</p></div>
-        <div class="card"><h2>🔮 Previsões Holt-Winters (4 dias)</h2><p id="holtwinters">Carregando...</p></div>
+
+  <h1>📊 Solana (SOL) - Análise & Previsões</h1>
+  <p>Dados coletados em tempo real da CoinGecko.</p>
+
+  <div class="resultados">
+    <h2>💰 Preço Atual: <span id="precoAtual">Carregando...</span></h2>
+    <h2>📉 Volatilidade: <span id="volatilidade">Carregando...</span></h2>
+    <h2>📊 Tendência: <span id="tendencia">Carregando...</span></h2>
+
+    <div class="previsoes">
+      <h3>🔮 Previsões SARIMA (4 dias):</h3>
+      <ul id="previsoesSARIMA"></ul>
     </div>
+
+    <div class="previsoes">
+      <h3>🔮 Previsões Holt-Winters (4 dias):</h3>
+      <ul id="previsoesHW"></ul>
+    </div>
+  </div>
+
+  <script>
+    // Carregar o arquivo JSON de dados
+    async function carregarDados() {
+      const url = "https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/data.json"; // Atualize com o caminho correto
+      const response = await fetch(url);
+      const dados = await response.json();
+
+      // Exibir os dados no HTML
+      document.getElementById("precoAtual").innerText = `$${dados.precoAtual.toFixed(2)}`;
+      document.getElementById("volatilidade").innerText = `${(dados.volatilidade * 100).toFixed(2)}%`;
+      document.getElementById("tendencia").innerText = dados.tendencia > 0 ? "📈 Alta" : (dados.tendencia < 0 ? "📉 Baixa" : "➡️ Estável");
+
+      // Previsões SARIMA
+      const previsoesSARIMA = document.getElementById("previsoesSARIMA");
+      dados.previsoesSARIMA.forEach((previsao, index) => {
+        const li = document.createElement("li");
+        li.innerText = `📆 Dia ${index + 1}: $${previsao.toFixed(2)}`;
+        previsoesSARIMA.appendChild(li);
+      });
+
+      // Previsões Holt-Winters
+      const previsoesHW = document.getElementById("previsoesHW");
+      dados.previsoesHoltWinters.forEach((previsao, index) => {
+        const li = document.createElement("li");
+        li.innerText = `📆 Dia ${index + 1}: $${previsao.toFixed(2)}`;
+        previsoesHW.appendChild(li);
+      });
+    }
+
+    // Chamar a função para carregar os dados
+    carregarDados();
+  </script>
+
 </body>
 </html>
