@@ -1,7 +1,7 @@
 <script>
   // Função para buscar os dados da Solana na CoinGecko
   async function buscarDadosSolana() {
-    const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=30';
+    const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=120';
     const req = await fetch(url);
     const data = await req.json();
     return data;
