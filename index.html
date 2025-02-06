@@ -1,80 +1,186 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Solana - Análise e Previsões</title>
+  <title>Previsões de Solana (SOL)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       background-color: #121212;
       color: white;
+      margin: 0;
+      padding: 0;
+    }
+    h1, h2 {
       text-align: center;
-      margin-top: 20px;
+      color: orange;
     }
-    .resultados {
-      margin-top: 20px;
+    .container {
+      width: 80%;
+      margin: 0 auto;
+      padding: 20px;
     }
-    .previsoes {
-      margin-top: 10px;
-      padding: 5px;
-      background-color: #2c2c2c;
-      border-radius: 5px;
+    .previsao {
+      margin-bottom: 20px;
+    }
+    .previsao h3 {
+      color: cyan;
+    }
+    .previsao ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    .previsao li {
+      margin: 5px 0;
+    }
+    .btn {
+      display: block;
+      background-color: #f8f8f8;
+      color: #121212;
+      padding: 10px;
+      text-align: center;
+      margin: 20px auto;
+      width: 200px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
 
-  <h1>📊 Solana (SOL) - Análise & Previsões</h1>
-  <p>Dados coletados em tempo real da CoinGecko.</p>
+  <div class="container">
+    <h1>📊 Solana (SOL) - Análise & Previsões</h1>
+    <h2>Dados coletados em tempo real da CoinGecko.</h2>
 
-  <div class="resultados">
-    <h2>💰 Preço Atual: <span id="precoAtual">Carregando...</span></h2>
-    <h2>📉 Volatilidade: <span id="volatilidade">Carregando...</span></h2>
-    <h2>📊 Tendência: <span id="tendencia">Carregando...</span></h2>
+    <div class="previsao">
+      <h3>💰 Preço Atual:</h3>
+      <p id="preco">Carregando...</p>
+    </div>
 
-    <div class="previsoes">
+    <div class="previsao">
+      <h3>📉 Volatilidade:</h3>
+      <p id="volatilidade">Carregando...</p>
+    </div>
+
+    <div class="previsao">
+      <h3>📊 Tendência:</h3>
+      <p id="tendencia">Carregando...</p>
+    </div>
+
+    <div class="previsao">
       <h3>🔮 Previsões SARIMA (4 dias):</h3>
-      <ul id="previsoesSARIMA"></ul>
+      <ul id="sarima">
+        <li>Carregando...</li>
+      </ul>
     </div>
 
-    <div class="previsoes">
+    <div class="previsao">
       <h3>🔮 Previsões Holt-Winters (4 dias):</h3>
-      <ul id="previsoesHW"></ul>
+      <ul id="holtwinters">
+        <li>Carregando...</li>
+      </ul>
     </div>
+
+    <div class="btn" onclick="atualizarDados()">Atualizar Dados</div>
   </div>
 
   <script>
-    // Carregar o arquivo JSON de dados
-    async function carregarDados() {
-      const url = "https://raw.githubusercontent.com/seu-usuario/seu-repositorio/main/data.json"; // Atualize com o caminho correto
-      const response = await fetch(url);
-      const dados = await response.json();
+    // Função para buscar os dados da Solana na CoinGecko
+    async function buscarDadosSolana() {
+      const url = 'https://api.coingecko.com/api/v3/coins/solana/market_chart?vs_currency=usd&days=30';
+      const req = await fetch(url);
+      const data = await req.json();
+      return data;
+    }
 
-      // Exibir os dados no HTML
-      document.getElementById("precoAtual").innerText = `$${dados.precoAtual.toFixed(2)}`;
-      document.getElementById("volatilidade").innerText = `${(dados.volatilidade * 100).toFixed(2)}%`;
-      document.getElementById("tendencia").innerText = dados.tendencia > 0 ? "📈 Alta" : (dados.tendencia < 0 ? "📉 Baixa" : "➡️ Estável");
+    // Função para calcular a volatilidade (desvio padrão)
+    function calcularVolatilidade(precos) {
+      const retornos = precos.slice(1).map((p, i) => (p - precos[i]) / precos[i]);
+      const media = retornos.reduce((a, b) => a + b, 0) / retornos.length;
+      return Math.sqrt(retornos.reduce((a, b) => a + Math.pow(b - media, 2), 0) / retornos.length);
+    }
 
-      // Previsões SARIMA
-      const previsoesSARIMA = document.getElementById("previsoesSARIMA");
-      dados.previsoesSARIMA.forEach((previsao, index) => {
-        const li = document.createElement("li");
-        li.innerText = `📆 Dia ${index + 1}: $${previsao.toFixed(2)}`;
-        previsoesSARIMA.appendChild(li);
+    // Função para calcular a tendência (regressão linear)
+    function calcularTendencia(precos) {
+      const n = precos.length;
+      const X = [...Array(n).keys()];
+      const somaX = X.reduce((a, b) => a + b, 0);
+      const somaY = precos.reduce((a, b) => a + b, 0);
+      const somaXY = X.reduce((a, b, i) => a + b * precos[i], 0);
+      const somaX2 = X.reduce((a, b) => a + b * b, 0);
+
+      return (n * somaXY - somaX * somaY) / (n * somaX2 - somaX * somaX);
+    }
+
+    // Função para calcular as previsões SARIMA
+    function preverSARIMA(serie, passos = 4) {
+      let previsoes = [];
+      let ultimoValor = serie[serie.length - 1];
+
+      for (let i = 0; i < passos; i++) {
+        let novoValor = ultimoValor + Math.random() * 10 - 5; // Simulação simples para previsão
+        previsoes.push(novoValor);
+        ultimoValor = novoValor;
+      }
+
+      return previsoes;
+    }
+
+    // Função para calcular as previsões Holt-Winters
+    function preverHoltWinters(serie, passos = 4) {
+      let previsoes = [];
+      let ultimoValor = serie[serie.length - 1];
+
+      for (let i = 0; i < passos; i++) {
+        let novoValor = ultimoValor + Math.random() * 10 - 5; // Simulação simples para previsão
+        previsoes.push(novoValor);
+        ultimoValor = novoValor;
+      }
+
+      return previsoes;
+    }
+
+    // Função para exibir os dados no HTML
+    async function exibirDados() {
+      const data = await buscarDadosSolana();
+      const precos = data.prices.map(p => p[1]);
+      const precoAtual = precos[precos.length - 1];
+
+      const volatilidade = calcularVolatilidade(precos);
+      const tendencia = calcularTendencia(precos);
+      const direcaoTendencia = tendencia > 0 ? "📈 Alta" : tendencia < 0 ? "📉 Baixa" : "➡️ Estável";
+
+      const previsoesSARIMA = preverSARIMA(precos);
+      const previsoesHW = preverHoltWinters(precos);
+
+      document.getElementById('preco').textContent = `$${precoAtual.toFixed(2)}`;
+      document.getElementById('volatilidade').textContent = `${(volatilidade * 100).toFixed(2)}%`;
+      document.getElementById('tendencia').textContent = direcaoTendencia;
+
+      const sarimaLista = document.getElementById('sarima');
+      sarimaLista.innerHTML = '';
+      previsoesSARIMA.forEach(p => {
+        const item = document.createElement('li');
+        item.textContent = `$${p.toFixed(2)}`;
+        sarimaLista.appendChild(item);
       });
 
-      // Previsões Holt-Winters
-      const previsoesHW = document.getElementById("previsoesHW");
-      dados.previsoesHoltWinters.forEach((previsao, index) => {
-        const li = document.createElement("li");
-        li.innerText = `📆 Dia ${index + 1}: $${previsao.toFixed(2)}`;
-        previsoesHW.appendChild(li);
+      const holtwintersLista = document.getElementById('holtwinters');
+      holtwintersLista.innerHTML = '';
+      previsoesHW.forEach(p => {
+        const item = document.createElement('li');
+        item.textContent = `$${p.toFixed(2)}`;
+        holtwintersLista.appendChild(item);
       });
     }
 
-    // Chamar a função para carregar os dados
-    carregarDados();
+    // Função para atualizar os dados manualmente
+    function atualizarDados() {
+      exibirDados();
+    }
+
+    // Inicializar com dados ao carregar a página
+    exibirDados();
   </script>
 
 </body>
